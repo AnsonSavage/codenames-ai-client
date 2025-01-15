@@ -52,7 +52,7 @@ def loadWords(filename:str ="word_list.txt") -> list:
 def getAI():
     """Entry point for the game engine to get an AI agent."""
     # return W2VSpymaster(W2VAssoc())
-    return LLMSypmaster()
+    return LLMSypmaster(debug=True)
 
 
 # ===============================================
