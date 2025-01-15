@@ -166,3 +166,4 @@ cython_debug/
 *.bin
 *.db
 *.bak
+codenames_env/
