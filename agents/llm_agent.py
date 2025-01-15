@@ -1,0 +1,94 @@
+from base.assoc import Assoc
+from base.constants import Team
+from base.spymaster import BaseSpymaster
+
+import ollama
+from pydantic import BaseModel, Field
+
+# Define the schema using Pydantic
+class CodenamesLLMHint(BaseModel):
+    hint: str = Field(..., description="A single word serving as the hint.")
+    num_words: int = Field(..., description="The number of words the hint is intended for.")
+    intended_words: list[str] = Field(..., description="The list of words the hint is targeting.")
+    explanation: str = Field(..., description="Explanation of how the hint relates to each intended word.")
+
+
+
+# class LLMAssoc(Assoc):
+#     def __init__(self, model, debug=False):
+#         super().__init__()
+#         self.model = model
+#         self.debug = debug
+
+#     def getAssocs(self, pos, neg, topn) -> list[tuple[str, float]]:
+#         pass
+
+#     def preprocess(self, w):
+#         return w
+
+
+class LLMSypmaster(BaseSpymaster):
+    def __init__(self, assoc=None, debug=False, max_words=3):
+        super().__init__(None) # assoc is required by the parent class, but the LLM doesn't use it.
+        self.debug = debug
+        self.max_words = max_words
+
+    def makeClue(self, board, team: Team) -> tuple[tuple[str, int], tuple[str]]:
+        # Step 1: Extract all words from the game board into a set
+        # This will be used later to ensure our clue isn't one of the board words
+        board_words = set(
+            [item for sublist in list(board.values()) for item in sublist]
+        )
+
+        # Step 2: Identify our team's words and the opponent's words based on team color
+        # 'U' represents blue team, 'R' represents red team
+        my_words = board["U" if team == Team.BLUE else "R"]
+        opponent_words = board["R" if team == Team.BLUE else "U"]
+
+        # Step 3: Create negative word list (words we want to avoid)
+        # Combines opponent's words with neutral ('N') and assassin ('A') words
+        # These are words our clue should NOT be similar to
+        assassin_word = board["A"][0]
+        neutral_words = board["N"]
+
+
+        # Craft the prompt
+        prompt = f"""
+        You are playing the game Codenames as the spymaster. Your team's words are: {', '.join(my_words)}.
+        The opposing team's words and neutral words are: {', '.join(opponent_words + neutral_words)}.
+        The assassin word is: {assassin_word} (you should avoid giving any hints that might lead the guesser to guess the assassin at all costs).
+        Provide a hint that relates to a maximum of {self.max_words} of your team's words.
+        Respond in the following JSON format:
+        {{
+        "hint": "A single word serving as the hint.",
+        "num_words": Number of words the hint is intended for,
+        "intended_words": ["A sublist of our team's words that the hint is targeting"],
+        "explanation": "Explanation of how the hint relates to each intended word. Think step by step. Ensure that the hint wouldn't lead the user to guess any of the words of the other team, especially if the other team has a word that is in a similar category."
+        }}
+
+        Remember that the hint word must be:
+            - A single English word
+            - Not a derivative of a word on currently on the board
+            - Not a proper noun
+            - Not an acronym
+        """
+
+        # Generate a response using the specified model and schema
+        response = ollama.chat(
+            messages=[
+                {'role': 'user', 'content': prompt}
+            ],
+            model='llama3:latest',
+            format=CodenamesLLMHint.model_json_schema(),
+        )
+
+        # Parse and validate the response
+        codenames_hint = CodenamesLLMHint.model_validate_json(response.message.content)
+
+        # Utilize the response
+        print(f"Hint: {codenames_hint.hint}")
+        print(f"Number of Words: {codenames_hint.num_words}")
+        print(f"Intended Words: {', '.join(codenames_hint.intended_words)}")
+        print(f"Explanation: {codenames_hint.explanation}")
+
+        return (codenames_hint.hint, codenames_hint.num_words), tuple(codenames_hint.intended_words)
