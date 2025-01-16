@@ -119,7 +119,7 @@ class LLMSypmaster(BaseSpymaster):
                 - Not a proper noun
                 - Not an acronym
             
-            Your guesser is an American college student with a background with computer science and animation, if that ever helps. If deciding how many words to get the guesser to guess, you should lean towards fewer intended words with more clear connections to the hint.
+            Your guesser is an American college student. If deciding how many words to get the guesser to guess, you should lean towards fewer intended words with more clear connections to the hint.
             """
 
             # Generate a response using the specified model and schema
