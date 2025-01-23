@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 # Define the schema using Pydantic
 class CodenamesLLMHint(BaseModel):
+    # train_of_thought: str = Field(..., description="The train of thought that led to the hint.")
     hint: str = Field(..., description="A single word serving as the hint.")
     num_words: int = Field(..., description="The number of words the hint is intended for.")
     intended_words: list[str] = Field(..., description="The list of words the hint is targeting.")
@@ -50,6 +51,16 @@ class LLMSypmaster(BaseSpymaster):
                 return False, "'hint' contains spaces."
             if not hint.isalpha():
                 return False, "'hint' contains non-alphabetic characters."
+            if hint.lower() in self.board_words:
+                return False, "'hint' is a word on the board."
+            
+            if len(hint > 3):
+                # Also check to see if any word on the board contains the hint
+                if any(hint in word for word in self.board_words):
+                    return False, "'hint' is a substring of a word on the board."
+                # Also check to see if the hint contains any word on the board
+                if any(word in hint for word in self.board_words):
+                    return False, "'hint' contains a word on the board."
 
             # Validate 'num_words' is a positive integer
             num_words = hint_data["num_words"]
@@ -143,6 +154,7 @@ class LLMSypmaster(BaseSpymaster):
             is_valid, reason = self._is_valid_output(hint_data.dict())
             if is_valid:
                 # Utilize the valid response
+                # print(f"Train of Thought: {hint_data.train_of_thought}")
                 print(f"Hint: {hint_data.hint}")
                 print(f"Number of Words: {hint_data.num_words}")
                 print(f"Intended Words: {', '.join(hint_data.intended_words)}")

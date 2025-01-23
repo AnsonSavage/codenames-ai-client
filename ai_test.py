@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     selected, colors, board, clue, combo = runTrial()
     print()
-    printBoard(selected, colors)
+    printBoard(selected)
 
     print(clue)
     print()
