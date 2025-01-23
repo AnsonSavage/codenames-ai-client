@@ -181,7 +181,7 @@ class OllamaSpymaster(LLMSpymaster):
 
 class OpenAISpymaster(LLMSpymaster):
     """Subclass that calls OpenAI to get a response."""
-    def __init__(self, openai_api_key: str, model: str = 'gpt-4o', debug=False, max_words=3):
+    def __init__(self, openai_api_key: str, model: str = 'o1-2024-12-17', debug=False, max_words=3):
         super().__init__(debug=debug, max_words=max_words)
         self.openai_api_key = openai_api_key
         self.model = model
