@@ -2,7 +2,7 @@ from random import randint, sample, seed, shuffle
 from sys import argv
 
 from agents.word2vec import W2VAssoc, W2VSpymaster
-from agents.llm_agent import LLMSypmaster
+from agents.llm_agent import OllamaSpymaster, OpenAISpymaster
 from base.constants import Team
 
 """
@@ -52,7 +52,11 @@ def loadWords(filename:str ="word_list.txt") -> list:
 def getAI():
     """Entry point for the game engine to get an AI agent."""
     # return W2VSpymaster(W2VAssoc())
-    return LLMSypmaster(debug=True)
+    import os
+    open_ai_api_key = os.getenv("OPENAI_API_KEY")
+    return OpenAISpymaster(open_ai_api_key, debug=True)
+    # return OllamaSpymaster(debug=True)
+    # return LLMSypmaster(debug=True)
 
 
 # ===============================================
