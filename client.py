@@ -6,9 +6,10 @@ import socketio
 from socketio.exceptions import TimeoutError
 
 from agents.word2vec import W2VAssoc, W2VSpymaster
-# from agents.llm_agent import LLMSypmaster
+from agents.llm_agent import OpenAISpymaster4o, OpenAISpymasterO1, OllamaSpymaster
 from base.constants import Team
 import time
+import json
 
 # Game Constants
 BOARD_SIZE = 25
@@ -84,8 +85,11 @@ def play_game(sio: socketio.SimpleClient, code: str, team: str, ai) -> None:
 # ** Instantiate your AI here! ********
 def getAI():
     """Entry point for the game engine to get an AI agent."""
+    with open("api_key.json") as f:
+        openai_api_key = json.load(f)["openai_api_key"]
+    return OpenAISpymasterO1(openai_api_key, debug=True)
     # return LLMSypmaster(debug=True)
-    return W2VSpymaster(assoc=W2VAssoc(), debug=True)
+    # return W2VSpymaster(assoc=W2VAssoc(), debug=True)
 
 
 def main():

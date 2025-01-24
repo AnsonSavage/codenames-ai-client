@@ -117,14 +117,14 @@ class LLMSpymaster(BaseSpymaster, metaclass=abc.ABCMeta):
             You are playing the game Codenames as the spymaster. Your team's words are: {', '.join(my_words)}.
             The opposing team's words and neutral words are: {', '.join(opponent_words + neutral_words)}.
             The assassin word is: {assassin_word} (you should avoid giving any hints that might lead the guesser to guess the assassin at all costs).
-            Provide a hint that relates to a maximum of {self.max_words} of your team's words.
+            Provide a hint that relates to a maximum of {self.max_words} of your team's words. Your hint should have a clear connection that a human with at most an undergraduate education would understand.
             Respond in the following JSON format:
             {{
             "plan": "Your plan for how you will get your team to guess the words and which words you think you might try targetting. This field is a paragraph. Talk about how the word you choose will be similar to a subset of your team's words, and different from the neutral, opponent, and especially the assassin word.",
             "hint": "A single word serving as the hint.",
             "num_words": Number of words the hint is intended for,
             "intended_words": ["A sublist of our team's words that the hint is targeting"],
-            "explanation": "Explanation of how the hint relates to each intended word. Think step by step. Also explain how the word is different from each of the negative words." 
+            "explanation": "Explanation of how the hint relates to each intended word. Also explain how the word is different from each of the negative words." 
             }}
 
             Remember that the hint word must be:
@@ -181,11 +181,29 @@ class OllamaSpymaster(LLMSpymaster):
 
 class OpenAISpymaster(LLMSpymaster):
     """Subclass that calls OpenAI to get a response."""
-    def __init__(self, openai_api_key: str, model: str = 'o1-2024-12-17', debug=False, max_words=3):
+    def __init__(self, openai_api_key: str, model: str = 'gpt-4o', debug=False, max_words=3):
         super().__init__(debug=debug, max_words=max_words)
         self.openai_api_key = openai_api_key
         self.model = model
-        self.client = OpenAI()  # Initialize the OpenAI client
+        self.client = OpenAI(api_key=self.openai_api_key)  # Initialize the OpenAI client
+
+class OpenAISpymaster(LLMSpymaster):
+    """Base class for OpenAI spymasters."""
+    def __init__(self, openai_api_key: str, model: str, debug=False, max_words=3):
+        super().__init__(debug=debug, max_words=max_words)
+        self.openai_api_key = openai_api_key
+        self.model = model
+        self.client = OpenAI(api_key=self.openai_api_key)  # Initialize the OpenAI client
+
+    def get_llm_response(self, prompt: str) -> CodenamesLLMHint:
+        """Abstract method to be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement get_llm_response.")
+
+
+class OpenAISpymaster4o(OpenAISpymaster):
+    """Subclass that calls OpenAI's 4o model to get a response."""
+    def __init__(self, openai_api_key: str, debug=False, max_words=3):
+        super().__init__(openai_api_key, model='gpt-4o', debug=debug, max_words=max_words)
 
     def get_llm_response(self, prompt: str) -> CodenamesLLMHint:
         # Use the OpenAI client to parse structured output
@@ -197,9 +215,34 @@ class OpenAISpymaster(LLMSpymaster):
             ],
             response_format=CodenamesLLMHint,
         )
-
-        # Extract the parsed output
-        print(completion.choices[0].message.content)
-        # import sys
-        # sys.exit(0)
         return completion.choices[0].message.content
+
+
+class OpenAISpymasterO1(OpenAISpymaster):
+    """Subclass that calls OpenAI's o1 model to get a response."""
+    def __init__(self, openai_api_key: str, debug=False, max_words=3):
+        super().__init__(openai_api_key, model='o1-preview', debug=debug, max_words=max_words)
+
+    def get_llm_response(self, prompt: str) -> CodenamesLLMHint:
+        # Step 1: Call o1 for reasoning
+        completion_o1 = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "user", "content": "Provide a hint for the game Codenames."},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        # Extract response from o1
+        o1_response = completion_o1.choices[0].message.content
+
+        # Step 2: Call gpt-4o-mini to parse and validate the response
+        completion_gpt4o_mini = self.client.beta.chat.completions.parse(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Format the following response into the CodenamesLLMHint schema."},
+                {"role": "user", "content": o1_response},
+            ],
+            response_format=CodenamesLLMHint,
+        )
+        return completion_gpt4o_mini.choices[0].message.content

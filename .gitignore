@@ -167,3 +167,4 @@ cython_debug/
 *.db
 *.bak
 codenames_env/
+api_key.json

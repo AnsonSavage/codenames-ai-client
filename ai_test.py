@@ -2,8 +2,9 @@ from random import randint, sample, seed, shuffle
 from sys import argv
 
 from agents.word2vec import W2VAssoc, W2VSpymaster
-from agents.llm_agent import OllamaSpymaster, OpenAISpymaster
+from agents.llm_agent import OllamaSpymaster, OpenAISpymaster4o, OpenAISpymasterO1 
 from base.constants import Team
+import json
 
 """
 This script is used to test the AI agents in a local environment. It generates a random
@@ -52,9 +53,10 @@ def loadWords(filename:str ="word_list.txt") -> list:
 def getAI():
     """Entry point for the game engine to get an AI agent."""
     # return W2VSpymaster(W2VAssoc())
-    import os
-    open_ai_api_key = os.getenv("OPENAI_API_KEY")
-    return OpenAISpymaster(open_ai_api_key, debug=True)
+    # Read the openai api key from the 'api_key.json' file
+    with open("api_key.json") as f:
+        openai_api_key = json.load(f)["openai_api_key"]
+    return OpenAISpymasterO1(openai_api_key, debug=True)
     # return OllamaSpymaster(debug=True)
     # return LLMSypmaster(debug=True)
 
